@@ -317,7 +317,7 @@ if (ACTUALIZADO) $('#actualizado').textContent = `Precios actualizados al ${ACTU
 
 /* Catálogo */
 let cat = 'Todo';
-const cats = ['Todo', ...new Set(PRODUCTOS.map(p => p.cat))];
+let cats = ['Todo', ...new Set(PRODUCTOS.map(p => p.cat))];
 function renderCats(){ $('#cats').innerHTML = cats.map(c => `<button type="button" aria-pressed="${c===cat}" data-cat="${esc(c)}">${esc(c)}</button>`).join(''); }
 function renderGrid(){
   const list = PRODUCTOS.filter(p => cat === 'Todo' || p.cat === cat).sort((a, b) => (b.foto ? 1 : 0) - (a.foto ? 1 : 0));
@@ -327,6 +327,21 @@ function renderGrid(){
 $('#cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; cat = b.dataset.cat; renderCats(); renderGrid(); });
 $('#grid').addEventListener('click', e => { const b = e.target.closest('[data-add]'); if (b) openProduct(byId(b.dataset.add)); });
 renderCats(); renderGrid();
+
+/* Precios en vivo: se leen de GitHub (los actualiza Claude desde la app). Si falla, quedan los de productos.js. */
+const PRODUCTOS_URL = 'https://raw.githubusercontent.com/urbaniluciano/zarilu-web/main/productos.json';
+fetch(PRODUCTOS_URL + '?t=' + Date.now(), { cache: 'no-store' })
+  .then(r => r.ok ? r.json() : null)
+  .then(d => {
+    if (!d || !Array.isArray(d.productos) || !d.productos.length) return;
+    PRODUCTOS = d.productos;
+    ACTUALIZADO = d.actualizado || ACTUALIZADO;
+    cats = ['Todo', ...new Set(PRODUCTOS.map(p => p.cat))];
+    if (!cats.includes(cat)) cat = 'Todo';
+    if (ACTUALIZADO) $('#actualizado').textContent = `Precios actualizados al ${ACTUALIZADO}. Te confirmamos el precio final al responder tu pedido.`;
+    renderCats(); renderGrid();
+  })
+  .catch(() => {});
 
 /* Pedido */
 let cart = [];
